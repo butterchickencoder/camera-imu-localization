@@ -1,6 +1,6 @@
 #pragma once
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
+#include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Geometry>
 
 class ESKF {
 public:
@@ -21,7 +21,6 @@ public:
     double sigma_bg;         // gyro bias random walk
 
     ESKF();
-void NewFunction();
     void propagate(const Eigen::Vector3d& acc_m,
                    const Eigen::Vector3d& gyro_m,
                    double dt);

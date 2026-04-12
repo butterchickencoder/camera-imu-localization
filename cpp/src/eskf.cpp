@@ -17,25 +17,50 @@ ESKF::ESKF() {
         0.01, 0.01, 0.01,    // δθ  (~5°)
         0.04, 0.04, 0.04,    // δba
         0.001, 0.001, 0.001; // δbg
-    sigma_acc  = 0.0028   m/s²      accelerometer noise density
-    sigma_gyro = 0.00016  rad/s     gyroscope noise density  
-    sigma_ba   = 0.00043  m/s²      accel bias random walk
-    sigma_bg   = 0.0000022 rad/s    gyro bias random walk
+    sigma_acc  = 0.0028;    // m/s²  - accelerometer noise density
+    sigma_gyro = 0.00016;   // rad/s - gyroscope noise density
+    sigma_ba   = 0.00043;   // m/s²  - accel bias random walk
+    sigma_bg   = 0.0000022; // rad/s - gyro bias random walk
 }
 
 void ESKF::propagate(const Eigen::Vector3d& acc_m,
                      const Eigen::Vector3d& gyro_m,
                      double dt)
 {
-    // TODO: subtract bias from measurements
+    Eigen::Vector3d acc_c, gyro_c; // bias corrected acceration and angular velocity
+    acc_c = acc_m - ba;
+    gyro_c = gyro_m - bg;
 
-    // TODO: get rotation matrix from quaternion
+    // get rotation matrix from quaternion
 
-    // TODO: update position
+    Eigen::Matrix3d R = q.toRotationMatrix();
 
-    // TODO: update velocity
 
-    // TODO: update quaternion from gyro (watch for near-zero case)
+    // update position
+
+    p += v * dt;
+
+    // update velocity
+    v += (R * acc_c + GRAVITY) * dt;
+
+    // update quaternion from gyro (watch for near-zero case)
+
+    // calculate angle moved during time step
+    double angle = gyro_c.norm() * dt;
+    Eigen::Quaterniond dq;
+
+    // avoid division by zero
+    if (angle < 1e-10) {
+        dq = Eigen::Quaterniond::Identity();
+    } else {
+
+        Eigen::Vector3d axis = gyro_c / gyro_c.norm();
+        dq = Eigen::Quaterniond(Eigen::AngleAxisd(angle, axis));
+    }
+
+    // Update rotation matrix based on change in axis
+    q = (q * dq).normalized();
+
 
     // TODO: build F matrix (linearised state transition)
 
