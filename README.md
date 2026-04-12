@@ -10,7 +10,7 @@ IMU drift for a drone in a 3D environment will add up very quickly. Within minut
 
 With camera frames, we don't really have absolute scale to work with. Also, in case there is only pure rotation or very small translation, the computation of the essential matrix doesn't work very well (degeneration)
 
-![alt text](results/vo_trajectory.png)
+![alt text](images/vo_trajectory.png)
 
 ## Project goal
 
