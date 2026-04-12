@@ -16,5 +16,6 @@ results/*.csv
 # OS
 .DS_Store
 
-# Claude
+# Internal
+planning/
 .claude/

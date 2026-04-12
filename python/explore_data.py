@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-BASE = os.path.join(os.path.dirname(__file__), "..", "data", "MH_01_easy", "mav0")
+BASE = os.path.join(os.path.dirname(__file__), "..", "data", "mav0")
 IMU_CSV        = os.path.join(BASE, "imu0", "data.csv")
 CAM_CSV        = os.path.join(BASE, "cam0", "data.csv")
 CAM_IMAGES_DIR = os.path.join(BASE, "cam0", "data")
