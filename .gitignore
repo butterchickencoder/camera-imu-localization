@@ -1,0 +1,17 @@
+# Dataset — do not commit
+data/
+
+# Build
+cpp/build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Results / outputs
+results/*.png
+results/*.csv
+
+# OS
+.DS_Store
