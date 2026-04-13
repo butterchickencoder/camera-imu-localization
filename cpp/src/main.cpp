@@ -4,62 +4,9 @@
 #include <string>
 #include <map>
 #include "eskf.h"
+#include "csv_utils.h"
 
 struct Pose { double r[9]; double t[3]; };
-
-std::map<int64_t, Eigen::Vector3d> loadGPS(const std::string& path) {
-    std::map<int64_t, Eigen::Vector3d> gps;
-    std::ifstream f(path);
-    std::string line;
-    std::getline(f, line);
-    while (std::getline(f, line)) {
-        if (line.empty()) continue;
-        std::stringstream ss(line);
-        std::string tok;
-        int64_t t; double x, y, z;
-        std::getline(ss, tok, ','); t = std::stoll(tok);
-        std::getline(ss, tok, ','); x = std::stod(tok);
-        std::getline(ss, tok, ','); y = std::stod(tok);
-        std::getline(ss, tok, ','); z = std::stod(tok);
-        gps[t] = Eigen::Vector3d(x, y, z);
-    }
-    return gps;
-}
-
-std::map<int64_t, double> loadBaro(const std::string& path) {
-    std::map<int64_t, double> baro;
-    std::ifstream f(path);
-    std::string line;
-    std::getline(f, line);
-    while (std::getline(f, line)) {
-        if (line.empty()) continue;
-        std::stringstream ss(line);
-        std::string tok;
-        int64_t t; double z;
-        std::getline(ss, tok, ','); t = std::stoll(tok);
-        std::getline(ss, tok, ','); z = std::stod(tok);
-        baro[t] = z;
-    }
-    return baro;
-}
-
-std::map<int64_t, Pose> loadPoses(const std::string& path) {
-    std::map<int64_t, Pose> poses;
-    std::ifstream f(path);
-    std::string line;
-    std::getline(f, line);
-    while (std::getline(f, line)) {
-        if (line.empty()) continue;
-        std::stringstream ss(line);
-        std::string tok;
-        int64_t t; Pose p;
-        std::getline(ss, tok, ','); t = std::stoll(tok);
-        for (int i = 0; i < 9; i++) { std::getline(ss, tok, ','); p.r[i] = std::stod(tok); }
-        for (int i = 0; i < 3; i++) { std::getline(ss, tok, ','); p.t[i] = std::stod(tok); }
-        poses[t] = p;
-    }
-    return poses;
-}
 
 void initFromGT(ESKF& eskf) {
     std::ifstream gt_file("../data/mav0/state_groundtruth_estimate0/data.csv");
@@ -82,7 +29,6 @@ void initFromGT(ESKF& eskf) {
 }
 
 void runFilter(const std::string& imu_path,
-               std::map<int64_t, Eigen::Vector3d> gps,
                std::map<int64_t, double> baro,
                std::map<int64_t, Pose> vo_poses,
                bool use_gps, bool use_baro, bool use_vo,
@@ -119,23 +65,6 @@ void runFilter(const std::string& imu_path,
         double dt = (t_ns - t_prev) * 1e-9;
         eskf.propagate(Eigen::Vector3d(ax, ay, az),
                        Eigen::Vector3d(gx, gy, gz), dt);
-
-        // GPS update
-        if (use_gps && !gps.empty()) {
-            auto git = gps.lower_bound(t_ns);
-            bool matched = false;
-            if (git != gps.end() && std::abs(git->first - t_ns) < 50000000LL)
-                matched = true;
-            else if (git != gps.begin()) {
-                --git;
-                if (std::abs(git->first - t_ns) < 50000000LL) matched = true;
-            }
-            if (matched) {
-                eskf.updatePosition(git->second, 1.0);
-                gps.erase(git);
-                gps_count++;
-            }
-        }
 
         // Barometer update
         if (use_baro && !baro.empty()) {
@@ -179,23 +108,39 @@ void runFilter(const std::string& imu_path,
 
 int main() {
     std::string imu_path = "../data/mav0/imu0/data.csv";
-    auto baro  = loadBaro("../results/baro_simulated.csv");
-    auto poses = loadPoses("../results/poses.csv");
+    // --- Loading Barometer (double) ---
+    auto baro = utils::loadCSV<double>("../results/baro_simulated.csv", [](std::stringstream& ss) {
+        std::string tok;
+        int64_t t; double z;
+        std::getline(ss, tok, ','); t = std::stoll(tok);
+        std::getline(ss, tok, ','); z = std::stod(tok);
+        return std::make_pair(t, z);
+    });
+
+    // --- Loading Poses (Pose) ---
+    auto poses = utils::loadCSV<Pose>("../results/poses.csv", [](std::stringstream& ss) {
+        std::string tok;
+        int64_t t; Pose p;
+        std::getline(ss, tok, ','); t = std::stoll(tok);
+        for (int i = 0; i < 9; i++) { std::getline(ss, tok, ','); p.r[i] = std::stod(tok); }
+        for (int i = 0; i < 3; i++) { std::getline(ss, tok, ','); p.t[i] = std::stod(tok); }
+        return std::make_pair(t, p);
+    });
     std::map<int64_t, Eigen::Vector3d> no_gps;
     std::map<int64_t, double> no_baro;
     std::map<int64_t, Pose> no_vo;
 
     // Run 1: IMU only
-    runFilter(imu_path, no_gps, no_baro, no_vo, false, false, false, "../results/traj_imu_only.csv");
+    runFilter(imu_path, no_baro, no_vo, false, false, false, "../results/traj_imu_only.csv");
 
     // Run 2: IMU + VO
-    runFilter(imu_path, no_gps, no_baro, poses, false, false, true, "../results/traj_imu_vo.csv");
+    runFilter(imu_path, no_baro, poses, false, false, true, "../results/traj_imu_vo.csv");
 
     // Run 3: IMU + Baro
-    runFilter(imu_path, no_gps, baro, no_vo, false, true, false, "../results/traj_imu_baro.csv");
+    runFilter(imu_path, baro, no_vo, false, true, false, "../results/traj_imu_baro.csv");
 
     // Run 4: IMU + Baro + VO
-    runFilter(imu_path, no_gps, baro, poses, false, true, true, "../results/traj_imu_baro_vo.csv");
+    runFilter(imu_path, baro, poses, false, true, true, "../results/traj_imu_baro_vo.csv");
 
     return 0;
 }

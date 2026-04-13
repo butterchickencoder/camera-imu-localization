@@ -76,8 +76,12 @@ if __name__ == "__main__":
 
         if good.sum() > 8:
             R, t, _ = estimate_pose(pts_prev[good], pts_curr[good])
-            r = R.flatten()
-            out.write(f"{t_ns},{r[0]},{r[1]},{r[2]},{r[3]},{r[4]},{r[5]},{r[6]},{r[7]},{r[8]},{t[0][0]},{t[1][0]},{t[2][0]}\n")
+
+            # reject bad poses — drone can't rotate more than 5° in 50ms
+            angle = np.degrees(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))
+            if angle < 5.0:
+                r = R.flatten()
+                out.write(f"{t_ns},{r[0]},{r[1]},{r[2]},{r[3]},{r[4]},{r[5]},{r[6]},{r[7]},{r[8]},{t[0][0]},{t[1][0]},{t[2][0]}\n")
 
         # re-detect features periodically to replace lost tracks
         if good.sum() < MAX_CORNERS // 2:
