@@ -136,10 +136,7 @@ int main() {
     // Run 2: IMU + VO
     runFilter(imu_path, no_baro, poses, false, false, true, "../results/traj_imu_vo.csv");
 
-    // Run 3: IMU + Baro
-    runFilter(imu_path, baro, no_vo, false, true, false, "../results/traj_imu_baro.csv");
-
-    // Run 4: IMU + Baro + VO
+    // Run 3: IMU + Baro + VO
     runFilter(imu_path, baro, poses, false, true, true, "../results/traj_imu_baro_vo.csv");
 
     return 0;

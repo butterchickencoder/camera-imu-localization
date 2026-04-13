@@ -11,7 +11,6 @@ gt.columns = ["t_ns","px","py","pz","qw","qx","qy","qz","vx","vy","vz","bgx","bg
 
 imu_only = pd.read_csv(os.path.join(BASE, "results/traj_imu_only.csv"))
 imu_vo   = pd.read_csv(os.path.join(BASE, "results/traj_imu_vo.csv"))
-imu_baro = pd.read_csv(os.path.join(BASE, "results/traj_imu_baro.csv"))
 baro_vo  = pd.read_csv(os.path.join(BASE, "results/traj_imu_baro_vo.csv"))
 
 def calc_rmse(traj, gt):
@@ -25,23 +24,20 @@ def calc_rmse(traj, gt):
     return np.sqrt(np.mean(err**2))
 
 trajs = {
-    "IMU only":       imu_only,
-    "IMU+VO":         imu_vo,
-    "IMU+Baro":       imu_baro,
-    "IMU+Baro+VO":    baro_vo,
+    "IMU only":    imu_only,
+    "IMU+VO":      imu_vo,
+    "IMU+Baro+VO": baro_vo,
 }
 
 colors = {
     "IMU only":    "tab:red",
     "IMU+VO":      "tab:blue",
-    "IMU+Baro":    "tab:orange",
     "IMU+Baro+VO": "green",
 }
 
 styles = {
     "IMU only":    "--",
     "IMU+VO":      ":",
-    "IMU+Baro":    "-.",
     "IMU+Baro+VO": "-",
 }
 
