@@ -18,8 +18,8 @@ ESKF::ESKF() {
         0.01, 0.01, 0.01,    // δθ  (~5°)
         0.04, 0.04, 0.04,    // δba
         0.001, 0.001, 0.001; // δbg
-    sigma_acc  = 0.5;       // m/s²  - tuned (datasheet: 0.0028, inflated for unmodeled errors)
-    sigma_gyro = 0.05;      // rad/s - tuned (datasheet: 0.00016)
+    sigma_acc  = 0.25;       // m/s²  - tuned (datasheet: 0.0028, inflated for unmodeled errors)
+    sigma_gyro = 0.25;      // rad/s - tuned (datasheet: 0.00016)
     sigma_ba   = 0.01;      // m/s²  - tuned (datasheet: 0.00043)
     sigma_bg   = 0.001;     // rad/s - tuned (datasheet: 0.0000022)
 }

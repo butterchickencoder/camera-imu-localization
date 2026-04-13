@@ -21,6 +21,8 @@ Use state estimation methods for fusing visual odometry with IMU
 
 Loosely-coupled monocular visual-inertial odometry using an Error-State Kalman Filter.
 
+![alt text](images/Overview_diagram.png)
+
 - **Vision (Python):** feature tracking → relative pose estimation → `poses.csv`
 - **Filter (C++):** IMU propagation + VO update → `trajectory.csv`
 - **Visualization (Python):** trajectory vs. ground truth
