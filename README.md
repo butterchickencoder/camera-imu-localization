@@ -26,5 +26,11 @@ Loosely-coupled monocular visual-inertial odometry using an Error-State Kalman F
 - **Visualization (Python):** trajectory vs. ground truth
 
 
+## Results
+![alt text](images/Filter_results.png)
+![alt text](images/Filter_results_zoomed.png)
+
+As we can see, IMU + VO improves the estimate considerably, but there is a constant drift in the z position. The z position can be improved by using a simulated barometric sensor. However, this does not improve the accuracy of the XY estimates compared to IMU + VO due to the innovation step for the z position update only corresponding to the coordinates of the drone in world coordinates.
+
 
 Tested on the [EuRoC MAV dataset](https://projects.asl.ethz.ch/datasets/euroc-mav/) (MH_01_easy).
