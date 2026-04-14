@@ -6,8 +6,23 @@
 #include "eskf.h"
 #include "csv_utils.h"
 
-struct Pose { double r[9]; double t[3]; };
+//struct Pose { double r[9]; double t[3]; };
 
+/* We want to be able to pass a config to to runFilter method so that it knows which
+    measurements to use and which to ignore
+*/
+struct FilterExperiment {
+    std::string name;           
+    std::string output_path;    
+    bool use_gps = false;
+    bool use_baro = false;
+    bool use_vo = false;
+    
+    // Paths to the actual data
+    std::string gps_path;
+    std::string baro_path;
+    std::string vo_path;
+};
 void initFromGT(ESKF& eskf) {
     std::ifstream gt_file("../data/mav0/state_groundtruth_estimate0/data.csv");
     std::string gt_line;
@@ -66,7 +81,7 @@ void runFilter(const std::string& imu_path,
         eskf.propagate(Eigen::Vector3d(ax, ay, az),
                        Eigen::Vector3d(gx, gy, gz), dt);
 
-        // Barometer update
+        // Barometer update after timestamp matching
         if (use_baro && !baro.empty()) {
             auto bit = baro.lower_bound(t_ns);
             bool matched = false;
@@ -83,7 +98,7 @@ void runFilter(const std::string& imu_path,
             }
         }
 
-        // VO update
+        // VO update after tiemstamp matches
         if (use_vo && !vo_poses.empty()) {
             auto vit = vo_poses.lower_bound(t_ns);
             if (vit != vo_poses.end() && std::abs(vit->first - t_ns) < 6000000LL) {
@@ -109,23 +124,11 @@ void runFilter(const std::string& imu_path,
 int main() {
     std::string imu_path = "../data/mav0/imu0/data.csv";
     // --- Loading Barometer (double) ---
-    auto baro = utils::loadCSV<double>("../results/baro_simulated.csv", [](std::stringstream& ss) {
-        std::string tok;
-        int64_t t; double z;
-        std::getline(ss, tok, ','); t = std::stoll(tok);
-        std::getline(ss, tok, ','); z = std::stod(tok);
-        return std::make_pair(t, z);
-    });
+    auto baro = utils::loadBaro("../results/baro_simulated.csv");
 
     // --- Loading Poses (Pose) ---
-    auto poses = utils::loadCSV<Pose>("../results/poses.csv", [](std::stringstream& ss) {
-        std::string tok;
-        int64_t t; Pose p;
-        std::getline(ss, tok, ','); t = std::stoll(tok);
-        for (int i = 0; i < 9; i++) { std::getline(ss, tok, ','); p.r[i] = std::stod(tok); }
-        for (int i = 0; i < 3; i++) { std::getline(ss, tok, ','); p.t[i] = std::stod(tok); }
-        return std::make_pair(t, p);
-    });
+    auto poses = utils::loadPoses("../results/poses.csv");
+
     std::map<int64_t, Eigen::Vector3d> no_gps;
     std::map<int64_t, double> no_baro;
     std::map<int64_t, Pose> no_vo;
