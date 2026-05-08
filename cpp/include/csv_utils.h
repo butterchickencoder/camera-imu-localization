@@ -20,7 +20,7 @@ namespace utils {
      Providing loadBaro and loadPoses utility functions for loading data from dataset
      */
 
-    std::map<int64_t, double> loadBaro(const std::string& path) {
+    inline std::map<int64_t, double> loadBaro(const std::string& path) {
         std::map<int64_t, double> baro;
         std::ifstream f(path);
         std::string line;
@@ -38,7 +38,7 @@ namespace utils {
     }
 
 
-    std::map<int64_t, Pose> loadPoses(const std::string& path) {
+    inline std::map<int64_t, Pose> loadPoses(const std::string& path) {
         std::map<int64_t, Pose> poses;
         std::ifstream f(path);
         std::string line;

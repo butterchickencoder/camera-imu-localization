@@ -18,10 +18,13 @@ def calc_rmse(traj, gt):
     for col in ["px", "py", "pz"]:
         f = interp1d(gt["t_ns"].values, gt[col].values, fill_value="extrapolate")
         gt_interp[col] = f(traj["t_ns"].values)
-    err = np.sqrt((traj["px"].values - gt_interp["px"])**2 +
-                  (traj["py"].values - gt_interp["py"])**2 +
-                  (traj["pz"].values - gt_interp["pz"])**2)
-    return np.sqrt(np.mean(err**2))
+    ex = traj["px"].values - gt_interp["px"]
+    ey = traj["py"].values - gt_interp["py"]
+    ez = traj["pz"].values - gt_interp["pz"]
+    total = np.sqrt(np.mean(ex**2 + ey**2 + ez**2))
+    xy    = np.sqrt(np.mean(ex**2 + ey**2))
+    z     = np.sqrt(np.mean(ez**2))
+    return total, xy, z
 
 trajs = {
     "IMU only":    imu_only,
@@ -42,8 +45,11 @@ styles = {
 }
 
 rmse = {name: calc_rmse(t, gt) for name, t in trajs.items()}
-for name, val in rmse.items():
-    print(f"RMSE  {name:20s}: {val:.2f} m")
+print(f"\n{'Config':<20} {'RMSE':>8} {'XY':>8} {'Z':>8}")
+print("-" * 46)
+for name, (total, xy, z) in rmse.items():
+    print(f"{name:<20} {total:>7.2f}m {xy:>7.2f}m {z:>7.2f}m")
+print()
 
 fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 fig.suptitle("GPS-Denied Sensor Fusion Comparison", fontsize=13)
@@ -51,7 +57,7 @@ fig.suptitle("GPS-Denied Sensor Fusion Comparison", fontsize=13)
 ax = axes[0]
 ax.plot(gt["px"], gt["py"], label="Ground truth", linewidth=2, color="black")
 for name, t in trajs.items():
-    ax.plot(t["px"], t["py"], label=f"{name} ({rmse[name]:.1f}m)",
+    ax.plot(t["px"], t["py"], label=f"{name} ({rmse[name][0]:.1f}m RMSE)",
             linewidth=1.2, linestyle=styles[name], color=colors[name])
 ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]"); ax.set_title("Top view")
 ax.legend(fontsize=9); ax.axis("equal"); ax.grid(True, alpha=0.3)

@@ -19,3 +19,13 @@ results/*.csv
 # Internal
 planning/
 .claude/
+
+# Stereo 
+stereo_wip/
+
+# Landmark 
+landmarks_wip/
+
+# Alignment 
+alignment_wip/
+STEREO_CHEATSHEET.md
