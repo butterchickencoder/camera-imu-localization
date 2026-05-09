@@ -5,6 +5,7 @@
 #include <map>
 #include "eskf.h"
 #include "csv_utils.h"
+#include "config.h"
 
 // struct Pose { double r[9]; double t[3]; };
 

@@ -19,6 +19,7 @@ results/*.csv
 # Internal
 planning/
 .claude/
+.vscode/
 
 # Stereo 
 stereo_wip/
