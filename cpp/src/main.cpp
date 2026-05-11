@@ -7,24 +7,8 @@
 #include "csv_utils.h"
 #include "config.h"
 
-// struct Pose { double r[9]; double t[3]; };
 
-/* We want to be able to pass a config to to runFilter method so that it knows which
-    measurements to use and which to ignore
-*/
-struct FilterExperiment
-{
-    std::string name;
-    std::string output_path;
-    bool use_gps = false;
-    bool use_baro = false;
-    bool use_vo = false;
-
-    // Paths to the actual data
-    std::string gps_path;
-    std::string baro_path;
-    std::string vo_path;
-};
+// Get initial state from Ground truth data
 void initFromGT(ESKF &eskf)
 {
     std::ifstream gt_file("../data/mav0/state_groundtruth_estimate0/data.csv");
@@ -51,14 +35,10 @@ void initFromGT(ESKF &eskf)
     }
 }
 
-void runFilter(const std::string &imu_path,
-               std::map<int64_t, double> baro,
-               std::map<int64_t, Pose> vo_poses,
-               bool use_gps, bool use_baro, bool use_vo,
-               const std::string &out_path)
+void runFilter(const FilterConfig &filtercfg)
 {
-    std::ifstream imu_file(imu_path);
-    std::ofstream out(out_path);
+    std::ifstream imu_file(filtercfg.IMU_path);
+    std::ofstream out(filtercfg.filter_output_path);
     out << "t_ns,px,py,pz\n";
 
     ESKF eskf;
@@ -66,8 +46,16 @@ void runFilter(const std::string &imu_path,
 
     std::string line;
     int64_t t_prev = -1;
-    int gps_count = 0, baro_count = 0, vo_count = 0;
+    int vo_count = 0;
 
+    // Load visual odometry poses
+    std::map<int64_t, Pose> vo_poses;
+    if (filtercfg.VO_mode != VOMode::None)
+    {
+        vo_poses = utils::loadPoses(filtercfg.VO_poses_path);
+    }
+
+    // Extract IMU data
     while (std::getline(imu_file, line))
     {
         if (line.empty() || line[0] == '#')
@@ -102,35 +90,10 @@ void runFilter(const std::string &imu_path,
         eskf.propagate(Eigen::Vector3d(ax, ay, az),
                        Eigen::Vector3d(gx, gy, gz), dt);
 
-        // Barometer update after timestamp matching
-        if (use_baro && !baro.empty())
-        {
-            auto bit = baro.lower_bound(t_ns);
-            bool matched = false;
-
-            if (bit != baro.end() && bit != baro.begin())
-            {
-                auto prev = std::prev(bit);
-                if (std::abs(prev->first - t_ns) < std::abs(bit->first - t_ns))
-                    bit = prev;
-            }
-            else if (bit == baro.end() && bit != baro.begin())
-            {
-                --bit;
-            }
-
-            if (bit != baro.end() && std::abs(bit->first - t_ns) < 50000000LL)
-                matched = true;
-            if (matched)
-            {
-                eskf.updateAltitude(bit->second, 0.5);
-                baro.erase(bit);
-                baro_count++;
-            }
-        }
 
         // VO update after tiemstamp matches
-        if (use_vo && !vo_poses.empty())
+
+        if (filtercfg.VO_mode != VOMode::None)
         {
             auto vit = vo_poses.lower_bound(t_ns);
             if (vit != vo_poses.end() && std::abs(vit->first - t_ns) < 6000000LL)
@@ -148,34 +111,27 @@ void runFilter(const std::string &imu_path,
         out << t_ns << "," << eskf.p.x() << "," << eskf.p.y() << "," << eskf.p.z() << "\n";
         t_prev = t_ns;
     }
-    std::cout << "Done: " << out_path
+    std::cout << "Done: " << filtercfg.filter_output_path
               << " | final p: " << eskf.p.transpose()
-              << " | GPS: " << gps_count
-              << " | Baro: " << baro_count
               << " | VO: " << vo_count << std::endl;
 }
 
 int main()
 {
-    std::string imu_path = "../data/mav0/imu0/data.csv";
-    // --- Loading Barometer (double) ---
-    auto baro = utils::loadBaro("../results/baro_simulated.csv");
 
-    // --- Loading Poses (Pose) ---
-    auto poses = utils::loadPoses("../results/poses.csv");
-
-    std::map<int64_t, Eigen::Vector3d> no_gps;
-    std::map<int64_t, double> no_baro;
-    std::map<int64_t, Pose> no_vo;
+    // Create filter configurations for the three runs, with imu paths, visual odometry output paths and output path for ESKF results after fusion
+    FilterConfig imu_only_cfg{VOMode::None, "../data/mav0/imu0/data.csv", "", "../results/traj_imu_only.csv"};
+    FilterConfig imu_mono_cfg{VOMode::Mono, "../data/mav0/imu0/data.csv", "../results/poses_mono_final.csv", "../results/traj_aligned_imu_vo_mono.csv" };
+    FilterConfig imu_stereo_cfg{VOMode::Stereo, "../data/mav0/imu0/data.csv", "../results/poses.csv", "../results/traj_aligned_imu_vo_stereo.csv"};
 
     // Run 1: IMU only
-    runFilter(imu_path, no_baro, no_vo, false, false, false, "../results/traj_imu_only.csv");
+    runFilter(imu_only_cfg);
 
-    // Run 2: IMU + VO
-    runFilter(imu_path, no_baro, poses, false, false, true, "../results/traj_imu_vo.csv");
+    // Run 2: IMU + Mono VO
+    runFilter(imu_mono_cfg);
 
-    // Run 3: IMU + Baro + VO
-    runFilter(imu_path, baro, poses, false, true, true, "../results/traj_imu_baro_vo.csv");
+    // Run 3: IMU + Stereo VO
+    runFilter(imu_stereo_cfg);
 
     return 0;
 }
