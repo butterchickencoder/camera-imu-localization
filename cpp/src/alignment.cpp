@@ -27,13 +27,14 @@ BiasEstimate estimateBiases(const std::vector<IMUSample>& imu_data,
     // Gyro bias: when stationary, gyro should read zero, so the mean is the bias
     Eigen::Vector3d bg = sum_gyro / n;
 
-    // Accel bias: when stationary, the accelerometer measures gravity in the body
-    // frame plus bias. In world frame, gravity is (0, 0, -9.81). Rotating into
-    // body frame: g_body = R_wb^T * g_world. So:
-    //   acc_measured = g_body + ba
-    //   ba = acc_mean - R_wb^T * g_world
+    // Accel bias: when stationary the accelerometer reads the reaction force against
+    // gravity, not gravity itself — i.e. it measures specific force, which points
+    // upward at rest. In world frame, gravity g_world = (0, 0, -9.81), so the
+    // measured specific force in the body frame is R_wb^T * (-g_world). Adding bias:
+    //   acc_measured = R_wb^T * (-g_world) + ba
+    //   ba = acc_mean - R_wb^T * (-g_world)
     Eigen::Vector3d acc_mean = sum_acc / n;
-    Eigen::Vector3d ba = acc_mean - R_wb.transpose() * GRAVITY;
+    Eigen::Vector3d ba = acc_mean - R_wb.transpose() * (-GRAVITY);
 
     std::cout << "Pre-launch alignment (" << n << " IMU samples in window):\n";
     std::cout << "  bg estimate: " << bg.transpose() << "\n";
