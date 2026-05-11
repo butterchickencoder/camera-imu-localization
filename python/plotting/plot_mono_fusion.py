@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 RES  = os.path.join(BASE, "results")
 
 plt.rcParams.update({

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 
-BASE = os.path.join(os.path.dirname(__file__), "..")
+BASE = os.path.join(os.path.dirname(__file__), "../..")
 CAM_CSV    = os.path.join(BASE, "data/mav0/cam0/data.csv")
 CAM_DIR    = os.path.join(BASE, "data/mav0/cam0/data")
 OUT_CSV    = os.path.join(BASE, "results/poses_mono_final.csv")
@@ -73,9 +73,11 @@ def estimate_pose(pts_prev, pts_curr):
     return R, t, mask
 
 
-if __name__ == "__main__":
+def run(args):
+
+    output_path = args.output
     frames = load_frames(CAM_CSV)
-    out = open(OUT_CSV, "w")
+    out = open(output_path, "w")
     out.write("t_ns,r00,r01,r02,r10,r11,r12,r20,r21,r22,tx,ty,tz\n")
 
     pts_prev = None
@@ -115,4 +117,12 @@ if __name__ == "__main__":
         img_prev = img
 
     out.close()
-    print(f"Done. Poses saved to {OUT_CSV}")
+    print(f"Done. Poses saved to {output_path}")
+
+
+if __name__ == "__main__":
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument("--output", default=OUT_CSV)
+    run(p.parse_args())
+    
